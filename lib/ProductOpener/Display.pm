@@ -9332,6 +9332,10 @@ CSS
 	my $decf = get_decimal_formatter($lc);
 	my $perf = get_percent_formatter($lc, 0);
 
+	# Look up the aggregated nutrients and category stats once, instead of once per nutrient
+	my $aggregated_nutrients_ref = deep_get($product_ref, "nutrition", "aggregated_set", "nutrients") // {};
+	my $category_values_ref = $product_ref->{values};
+
 	foreach my $nutrient (@nutrients) {
 
 		next if $nutrient =~ /^\#/;
@@ -9347,11 +9351,12 @@ CSS
 
 		# Check if we have a value for the nutrient (product) that is not estimated,
 		# or for the category (stats)
-		my $nutrient_value = deep_get($product_ref, "nutrition", "aggregated_set", "nutrients", $nid, "value");
-		my $nutrient_source = deep_get($product_ref, "nutrition", "aggregated_set", "nutrients", $nid, "source");
+		my $aggregated_nutrient_ref = $aggregated_nutrients_ref->{$nid} // {};
+		my $nutrient_value = $aggregated_nutrient_ref->{value};
+		my $nutrient_source = $aggregated_nutrient_ref->{source};
 
 		if (   ((defined $nutrient_value) and (defined $nutrient_source) and ($nutrient_source ne 'estimate'))
-			or (deep_exists($product_ref, "values", $nid, "mean")))
+			or ((defined $category_values_ref) and deep_exists($category_values_ref, $nid, "mean")))
 		{
 			$shown = 1;
 			$log->debug("showing nutrient in nutrition table", {nid => $nid}) if $log->is_debug();
